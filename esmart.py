@@ -8,16 +8,16 @@ import struct, time, serial, socket, requests
 STATE_START = 0
 STATE_DATA = 1
 
-REQUEST_MSG0 = "\xaa\x01\x01\x01\x00\x03\x00\x00\x1e\x32"
-LOAD_OFF = "\xaa\x01\x01\x02\x04\x04\x01\x00\xfe\x13\x38"
-LOAD_ON = "\xaa\x01\x01\x02\x04\x04\x01\x00\xfd\x13\x39"
+REQUEST_MSG0 = b"\xaa\x01\x01\x01\x00\x03\x00\x00\x1e\x32"
+LOAD_OFF = b"\xaa\x01\x01\x02\x04\x04\x01\x00\xfe\x13\x38"
+LOAD_ON = b"\xaa\x01\x01\x02\x04\x04\x01\x00\xfd\x13\x39"
 
 DEVICE_MODE = ["IDLE", "CC", "", "FLOAT", "STARTING"]
 
 class esmart:
 	def __init__(self):
 		self.state = STATE_START
-		self.data = ""
+		self.data = []
 		self.callback = False
 		self.port = ""
 		self.timeout = 0
@@ -45,19 +45,19 @@ class esmart:
 	def parse(self, data):
 		for c in data:
 			if (self.state == STATE_START):
-				if (c == '\xaa'):
+				if (c == 0xaa):
 					# Start character detected
 					self.state = STATE_DATA
-					self.data = ""
+					self.data = []
 					self.target_len = 255
-				else:
-					print c
+				#else:
+					#print c
 
 			elif (self.state == STATE_DATA):
-				self.data += c
+				self.data.append(c)
 				# Received enough of the packet to determine length
 				if (len(self.data) == 5):
-					self.target_len = 6 + ord(self.data[4])
+					self.target_len = 6 + self.data[4]
 
 				# Received whole packet
 				if (len(self.data) == self.target_len):
@@ -66,23 +66,24 @@ class esmart:
 					#print " ".join("{:02x}".format(ord(c)) for c in self.data)
 
 					# Source 3 is MPPT device
-					if (ord(self.data[2]) == 3):
-						msg_type = ord(self.data[3])
+					if (self.data[2] == 3):
+						msg_type = self.data[3]
 
 						# Type 0 packet contains most data
-						if (ord(self.data[3]) == 0):
-							fields['chg_mode'] = struct.unpack("<H", self.data[7:9])[0]
-							fields['pv_volt'] = struct.unpack("<H", self.data[9:11])[0] / 10.0
-							fields['bat_volt'] = struct.unpack("<H", self.data[11:13])[0] / 10.0
-							fields['chg_cur'] = struct.unpack("<H", self.data[13:15])[0] / 10.0
-							fields['load_volt'] = struct.unpack("<H", self.data[17:19])[0] / 10.0
-							fields['load_cur'] = struct.unpack("<H", self.data[19:21])[0] / 10.0
-							fields['chg_power'] = struct.unpack("<H", self.data[21:23])[0]
-							fields['load_power'] = struct.unpack("<H", self.data[23:25])[0]
-							fields['bat_temp'] = ord(self.data[25])
-							fields['int_temp'] = ord(self.data[27])
-							fields['soc'] = ord(self.data[29])
-							fields['co2_gram'] = struct.unpack("<H", self.data[33:35])[0]
+						if (self.data[3] == 0):
+							fields = {}
+							fields['chg_mode'] = int.from_bytes(self.data[7:9], byteorder='little')
+							fields['pv_volt'] = int.from_bytes(self.data[9:11], byteorder='little') / 10.0
+							fields['bat_volt'] = int.from_bytes(self.data[11:13], byteorder='little') / 10.0
+							fields['chg_cur'] = int.from_bytes(self.data[13:15], byteorder='little') / 10.0
+							fields['load_volt'] = int.from_bytes(self.data[17:19], byteorder='little') / 10.0
+							fields['load_cur'] = int.from_bytes(self.data[19:21], byteorder='little') / 10.0
+							fields['chg_power'] = int.from_bytes(self.data[21:23], byteorder='little')
+							fields['load_power'] = int.from_bytes(self.data[23:25], byteorder='little')
+							fields['bat_temp'] = self.data[25]
+							fields['int_temp'] = self.data[27]
+							fields['soc'] = self.data[29]
+							fields['co2_gram'] = int.from_bytes(self.data[33:35], byteorder='little')
 
 							self.callback(fields)
 

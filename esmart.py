@@ -12,7 +12,7 @@ REQUEST_MSG0 = b"\xaa\x01\x01\x01\x00\x03\x00\x00\x1e\x32"
 LOAD_OFF = b"\xaa\x01\x01\x02\x04\x04\x01\x00\xfe\x13\x38"
 LOAD_ON = b"\xaa\x01\x01\x02\x04\x04\x01\x00\xfd\x13\x39"
 
-DEVICE_MODE = ["IDLE", "CC", "", "FLOAT", "STARTING"]
+DEVICE_MODE = ["IDLE", "CC", "CV", "FLOAT", "STARTING"]
 
 class esmart:
 	def __init__(self):
